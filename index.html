@@ -790,22 +790,25 @@ function hideTooltip() { tooltip.classList.remove('visible'); }
 // ═══════════════════════════════════════════════════════
 
 let dragIdx = -1;
+let dragMoved = false;
 function startDrag(e, i) {
   e.stopPropagation();
   dragIdx = i;
-  if (currentNet !== 'custom') {
-    layout._pinned = i;
-    layout.reheat(18);
-  }
+  dragMoved = false;
+  if (currentNet !== 'custom') layout._pinned = i;
 }
 svg.addEventListener('mousemove', e => {
   if (dragIdx < 0) return;
   const rect = svg.getBoundingClientRect();
   layout.x[dragIdx] = e.clientX - rect.left;
   layout.y[dragIdx] = e.clientY - rect.top;
-  if (currentNet === 'custom') updatePositions(); // immediate update, no spring
+  if (currentNet === 'custom') {
+    updatePositions(); // static — just reposition
+  } else {
+    if (!dragMoved) { layout.reheat(18); dragMoved = true; } // reheat only on first real movement
+  }
 });
-svg.addEventListener('mouseup', () => { dragIdx = -1; layout && (layout._pinned = -1); });
+svg.addEventListener('mouseup', () => { dragIdx = -1; dragMoved = false; layout && (layout._pinned = -1); });
 
 // ═══════════════════════════════════════════════════════
 // CUSTOM NETWORK
@@ -1025,8 +1028,8 @@ function loadNetwork(netId) {
   buildSVG(currentGraph, layout, metrics);
 
   function tick() {
-    // Run spring only for non-custom tabs
-    if (currentNet !== 'custom' && (layout.temp > layout.minTemp || dragIdx >= 0)) {
+    // Run spring only for non-custom tabs, and only while temperature is above minimum
+    if (currentNet !== 'custom' && layout.temp > layout.minTemp) {
       layout.step();
       updatePositions();
     }
