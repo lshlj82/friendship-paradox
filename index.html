@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Friendship Paradox Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080C12;
+    --surface: #0E1520;
+    --surface2: #141D2B;
+    --border: #1E2D42;
+    --text: #C8D8EC;
+    --text-dim: #5A7A9A;
+    --text-bright: #EAF2FF;
+    --blue: #3B82F6;
+    --blue-dim: #1D3D7A;
+    --teal: #14B8A6;
+    --amber: #F59E0B;
+    --red: #EF4444;
+    --green: #22C55E;
+    --purple: #A78BFA;
+    --node-default: #2563EB;
+    --node-dominated-mean: #DC2626;
+    --node-dominated-median: #D97706;
+    --node-dominated-both: #7C3AED;
+    --node-undominated: #059669;
+    --font-body: 'IBM Plex Sans', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'Cascadia Code', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ─── Header ─── */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-bright);
+    letter-spacing: -0.3px;
+  }
+  header p {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  /* ─── Layout ─── */
+  .app {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    grid-template-rows: auto 1fr;
+    height: calc(100vh - 61px - 80px);
+    overflow: hidden;
+  }
+
+  /* ─── Network selector tabs ─── */
+  .tabs {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 2px;
+    padding: 12px 16px 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .tab {
+    padding: 7px 18px;
+    font-size: 13px;
+    font-family: var(--font-body);
+    color: var(--text-dim);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+  /* ─── Canvas panel ─── */
+  .canvas-panel {
+    position: relative;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  #network-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .canvas-hint {
+    position: absolute;
+    bottom: 14px;
+    left: 16px;
+    font-size: 11px;
+    color: var(--text-dim);
+    pointer-events: none;
+  }
+
+  /* Node tooltip */
+  #tooltip {
+    position: absolute;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 12px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s;
+    max-width: 220px;
+    z-index: 10;
+  }
+  #tooltip.visible { opacity: 1; }
+  #tooltip .tt-title {
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 5px;
+    font-size: 13px;
+  }
+  #tooltip .tt-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 1px 0;
+  }
+  #tooltip .tt-label { color: var(--text-dim); }
+  #tooltip .tt-val { font-family: var(--font-mono); color: var(--text-bright); }
+
+  /* ─── Metrics panel ─── */
+  .metrics-panel {
+    background: var(--bg);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .section-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  /* Metric cards */
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .metric-card .mc-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 3px;
+  }
+  .metric-card .mc-formula {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .metric-card .mc-value {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text-bright);
+  }
+  .metric-card .mc-interp {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+  .metric-card.highlight-blue { border-left: 3px solid var(--blue); }
+  .metric-card.highlight-teal { border-left: 3px solid var(--teal); }
+  .metric-card.highlight-amber { border-left: 3px solid var(--amber); }
+  .metric-card.highlight-purple { border-left: 3px solid var(--purple); }
+
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    padding: 2px 7px;
+    border-radius: 10px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .badge-yes { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge-no  { background: rgba(239,68,68,0.15);  color: var(--red); }
+
+  /* Legend */
+  .legend {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Explainer */
+  .explainer {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.65;
+  }
+  .explainer strong { color: var(--text); font-weight: 500; }
+
+  /* Mean base comparison row */
+  .cov-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+  .cov-row .cr-label { font-size: 11px; color: var(--text-dim); }
+  .cov-row .cr-eq {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text);
+    margin-top: 4px;
+    line-height: 1.7;
+  }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  .neu { color: var(--amber); }
+
+  /* ─── Footer ─── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 14px 32px;
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 40px;
+    background: var(--surface);
+  }
+  footer .ft-block { flex: 1; min-width: 260px; }
+  footer .ft-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 3px; }
+  footer a { color: var(--blue); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+  footer .ft-credit { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); white-space: nowrap; }
+
+  /* Scrollbar */
+  .metrics-panel::-webkit-scrollbar { width: 4px; }
+  .metrics-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  @media (max-width: 700px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: auto 55vw 1fr; height: auto; overflow: visible; }
+    .metrics-panel { border-left: none; border-top: 1px solid var(--border); overflow-y: visible; }
+    .canvas-panel { height: 55vw; }
+    footer { padding: 12px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Friendship Paradox Explorer</h1>
+  <p>mean-based vs. majority-based network inequalities</p>
+</header>
+
+<div class="app">
+  <div class="tabs">
+    <button class="tab active" data-net="toy">Toy (5 nodes)</button>
+    <button class="tab" data-net="zkc">Karate Club (34)</button>
+    <button class="tab" data-net="afb">Football (115)</button>
+    <button class="tab" data-net="custom">Custom</button>
+  </div>
+
+  <div class="canvas-panel">
+    <svg id="network-svg"></svg>
+    <div id="tooltip">
+      <div class="tt-title" id="tt-name">Node 1</div>
+      <div class="tt-row" id="tt-conf-row" style="display:none"><span class="tt-label">conference</span><span class="tt-val" id="tt-conf">—</span></div>
+      <div class="tt-row"><span class="tt-label">degree kᵢ</span><span class="tt-val" id="tt-ki">—</span></div>
+      <div class="tt-row"><span class="tt-label">mean-nbr kₙₙ(i)</span><span class="tt-val" id="tt-knn">—</span></div>
+      <div class="tt-row"><span class="tt-label">hub centrality hᵢ</span><span class="tt-val" id="tt-hi">—</span></div>
+      <div class="tt-row"><span class="tt-label">mean-dominated?</span><span class="tt-val" id="tt-mean-dom">—</span></div>
+      <div class="tt-row"><span class="tt-label">median-dominated?</span><span class="tt-val" id="tt-med-dom">—</span></div>
+    </div>
+    <div class="canvas-hint" id="canvas-hint">Hover nodes to inspect · drag to reposition</div>
+  </div>
+
+  <div class="metrics-panel">
+    <div class="section-label">Network metrics</div>
+
+    <div class="metric-card highlight-blue">
+      <div class="mc-label">Mean degree</div>
+      <div class="mc-formula">⟨k⟩ = Σkᵢ / N</div>
+      <div class="mc-value" id="m-mean-k">—</div>
+    </div>
+
+    <div class="section-label" style="margin-top:4px">Classical FP — mean-based</div>
+
+    <div class="metric-card highlight-blue">
+      <div class="mc-label">Alter-based FP  <span class="badge" id="b-alter">—</span></div>
+      <div class="mc-formula">⟨k_friend⟩ = ⟨k²⟩/⟨k⟩</div>
+      <div class="mc-value" id="m-kfriend">—</div>
+      <div class="mc-interp">Expected degree following a random edge</div>
+    </div>
+
+    <div class="metric-card highlight-teal">
+      <div class="mc-label">Ego-based FP  <span class="badge" id="b-ego">—</span></div>
+      <div class="mc-formula">⟨k_nn⟩ = Σ kₙₙ(i) / N</div>
+      <div class="mc-value" id="m-knn">—</div>
+      <div class="mc-interp">Average of each node's mean-neighbor degree</div>
+    </div>
+
+    <div class="cov-row">
+      <div class="cr-label">Difference (governed by degree–degree covariance)</div>
+      <div class="cr-eq" id="m-cov-eq">⟨k_friend⟩ − ⟨k_nn⟩ = Cov(k,kₙₙ)/⟨k⟩ = —</div>
+    </div>
+
+    <div class="section-label" style="margin-top:4px">Majority-type — going beyond averages</div>
+
+    <div class="metric-card highlight-amber">
+      <div class="mc-label">φ_global — mean-based majority  <span class="badge" id="b-global">—</span></div>
+      <div class="mc-formula">fraction {kᵢ &lt; kₙₙ(i)}</div>
+      <div class="mc-value" id="m-phi-global">—</div>
+      <div class="mc-interp">Share of nodes whose degree is below their neighbors' mean</div>
+    </div>
+
+    <div class="metric-card highlight-purple">
+      <div class="mc-label">φ_local — median-based majority  <span class="badge" id="b-local">—</span></div>
+      <div class="mc-formula">fraction {hᵢ &lt; ½}  where hᵢ = |{j∈𝒩: kⱼ &lt; kᵢ}|/kᵢ</div>
+      <div class="mc-value" id="m-phi-local">—</div>
+      <div class="mc-interp">Share of nodes where most neighbors have higher degree</div>
+    </div>
+
+    <div class="legend" id="legend-domination">
+      <div class="section-label" style="margin-bottom:6px">Node color · domination type <span id="legend-afb-note" style="display:none;font-style:italic">(ring for AFB)</span></div>
+      <div class="legend-row"><span class="legend-dot" style="background:#059669"></span>Not dominated (neither)</div>
+      <div class="legend-row"><span class="legend-dot" style="background:#2563EB"></span>Mean-dominated only (kᵢ &lt; kₙₙ)</div>
+      <div class="legend-row"><span class="legend-dot" style="background:#D97706"></span>Median-dominated only (hᵢ &lt; ½)</div>
+      <div class="legend-row"><span class="legend-dot" style="background:#7C3AED"></span>Both mean- and median-dominated</div>
+    </div>
+
+    <div class="legend" id="legend-conferences" style="display:none">
+      <div class="section-label" style="margin-bottom:6px">Node fill · conference</div>
+      <div id="conf-legend-rows"></div>
+    </div>
+
+    <div class="explainer">
+      <strong>Key insight:</strong> The classical FP (⟨k_friend⟩ ≥ ⟨k⟩ and ⟨k_nn⟩ ≥ ⟨k⟩) always holds, but says nothing about
+      <em>how many</em> nodes are individually dominated. φ_global and φ_local can both fall below ½ even while the
+      FP inequalities hold — and they can diverge from each other when neighbor-degree distributions are skewed.
+    </div>
+
+    <div id="custom-controls" style="display:none;">
+      <div class="section-label">Build your network</div>
+      <div style="font-size:12px;color:var(--text-dim);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;">
+        <p style="margin-bottom:8px;color:var(--text)">Click canvas to add nodes. Click two nodes to add/remove an edge between them.</p>
+        <button id="btn-clear" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:5px;cursor:pointer;font-size:12px;font-family:var(--font-body)">Clear all</button>
+        <button id="btn-star" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:5px;cursor:pointer;font-size:12px;font-family:var(--font-body);margin-left:4px">Star (n=5)</button>
+        <button id="btn-ring" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:5px;cursor:pointer;font-size:12px;font-family:var(--font-body);margin-left:4px">Ring (n=6)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// GRAPH DATA
+// ═══════════════════════════════════════════════════════
+
+// Toy: nodes 0–4, edges based on paper (nodes 1,2,3 form triangle + all connect to 4,5)
+// Paper uses 1-indexed; we use 0-indexed
+function toyGraph() {
+  // k1=k2=k3=4, k4=k5=3
+  // edges: (0,1),(0,2),(1,2) [triangle], (0,3),(0,4),(1,3),(1,4),(2,3),(2,4)
+  const nodes = [0,1,2,3,4].map(i => ({ id: i, label: String(i+1) }));
+  const edges = [
+    [0,1],[0,2],[1,2], // triangle
+    [0,3],[0,4],[1,3],[1,4],[2,3],[2,4]
+  ].map(([a,b]) => ({ s: a, t: b }));
+  return { nodes, edges };
+}
+
+// ZKC — Zachary's Karate Club (34 nodes, 78 edges)
+// Standard edge list from the network science literature
+function zkcGraph() {
+  const edgeList = [
+    [0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],[0,8],[0,10],[0,11],[0,12],[0,13],[0,17],[0,19],[0,21],[0,31],
+    [1,2],[1,3],[1,7],[1,13],[1,17],[1,19],[1,21],[1,30],
+    [2,3],[2,7],[2,8],[2,9],[2,13],[2,27],[2,28],[2,32],
+    [3,7],[3,12],[3,13],[4,6],[4,10],[5,6],[5,10],[5,16],[6,16],
+    [8,30],[8,32],[8,33],[9,33],[13,33],[14,32],[14,33],[15,32],[15,33],
+    [18,32],[18,33],[19,33],[20,32],[20,33],[22,32],[22,33],
+    [23,25],[23,27],[23,29],[23,32],[23,33],[24,25],[24,27],[24,31],
+    [25,31],[26,29],[26,33],[27,33],[28,31],[28,33],[29,32],[29,33],[30,32],[30,33],[31,32],[31,33],[32,33]
+  ];
+  const N = 34;
+  const nodes = Array.from({length: N}, (_,i) => ({ id: i, label: String(i+1) }));
+  const edges = edgeList.map(([s,t]) => ({ s, t }));
+  return { nodes, edges };
+}
+
+// AFB — American Football (Girvan-Newman 2002), exact data from football.gml
+// N=115, M=613, ⟨k⟩=10.661, φ_global=0.435, φ_local=0.843
+function afbGraph() {
+  const conf_names = ["Atlantic Coast", "Big East", "Big Ten", "Big Twelve", "Conference USA", "Independents", "Mid-American", "Mountain West", "Pacific Ten", "Southeastern", "Sun Belt", "Western Athletic"];
+  const conf_colors = ["#782F40", "#F47321", "#00274C", "#841617", "#FDB913", "#AE9142", "#00B140", "#1E4D2B", "#4b2e83", "#0021A5", "#343636", "#B1B3B3"];
+  const rawNodes = [{"id": 0, "conf": 7, "label": "BrighamYoung"}, {"id": 1, "conf": 0, "label": "FloridaState"}, {"id": 2, "conf": 2, "label": "Iowa"}, {"id": 3, "conf": 3, "label": "KansasState"}, {"id": 4, "conf": 7, "label": "NewMexico"}, {"id": 5, "conf": 3, "label": "TexasTech"}, {"id": 6, "conf": 2, "label": "PennState"}, {"id": 7, "conf": 8, "label": "SouthernCalifornia"}, {"id": 8, "conf": 8, "label": "ArizonaState"}, {"id": 9, "conf": 7, "label": "SanDiegoState"}, {"id": 10, "conf": 3, "label": "Baylor"}, {"id": 11, "conf": 10, "label": "NorthTexas"}, {"id": 12, "conf": 6, "label": "NorthernIllinois"}, {"id": 13, "conf": 2, "label": "Northwestern"}, {"id": 14, "conf": 6, "label": "WesternMichigan"}, {"id": 15, "conf": 2, "label": "Wisconsin"}, {"id": 16, "conf": 7, "label": "Wyoming"}, {"id": 17, "conf": 9, "label": "Auburn"}, {"id": 18, "conf": 6, "label": "Akron"}, {"id": 19, "conf": 1, "label": "VirginiaTech"}, {"id": 20, "conf": 9, "label": "Alabama"}, {"id": 21, "conf": 8, "label": "UCLA"}, {"id": 22, "conf": 8, "label": "Arizona"}, {"id": 23, "conf": 7, "label": "Utah"}, {"id": 24, "conf": 10, "label": "ArkansasState"}, {"id": 25, "conf": 0, "label": "NorthCarolinaState"}, {"id": 26, "conf": 6, "label": "BallState"}, {"id": 27, "conf": 9, "label": "Florida"}, {"id": 28, "conf": 11, "label": "BoiseState"}, {"id": 29, "conf": 1, "label": "BostonCollege"}, {"id": 30, "conf": 1, "label": "WestVirginia"}, {"id": 31, "conf": 6, "label": "BowlingGreenState"}, {"id": 32, "conf": 2, "label": "Michigan"}, {"id": 33, "conf": 0, "label": "Virginia"}, {"id": 34, "conf": 6, "label": "Buffalo"}, {"id": 35, "conf": 1, "label": "Syracuse"}, {"id": 36, "conf": 5, "label": "CentralFlorida"}, {"id": 37, "conf": 0, "label": "GeorgiaTech"}, {"id": 38, "conf": 6, "label": "CentralMichigan"}, {"id": 39, "conf": 2, "label": "Purdue"}, {"id": 40, "conf": 3, "label": "Colorado"}, {"id": 41, "conf": 7, "label": "ColoradoState"}, {"id": 42, "conf": 5, "label": "Connecticut"}, {"id": 43, "conf": 6, "label": "EasternMichigan"}, {"id": 44, "conf": 4, "label": "EastCarolina"}, {"id": 45, "conf": 0, "label": "Duke"}, {"id": 46, "conf": 11, "label": "FresnoState"}, {"id": 47, "conf": 2, "label": "OhioState"}, {"id": 48, "conf": 4, "label": "Houston"}, {"id": 49, "conf": 11, "label": "Rice"}, {"id": 50, "conf": 10, "label": "Idaho"}, {"id": 51, "conf": 8, "label": "Washington"}, {"id": 52, "conf": 3, "label": "Kansas"}, {"id": 53, "conf": 11, "label": "SouthernMethodist"}, {"id": 54, "conf": 6, "label": "Kent"}, {"id": 55, "conf": 1, "label": "Pittsburgh"}, {"id": 56, "conf": 9, "label": "Kentucky"}, {"id": 57, "conf": 4, "label": "Louisville"}, {"id": 58, "conf": 11, "label": "LouisianaTech"}, {"id": 59, "conf": 10, "label": "LouisianaMonroe"}, {"id": 60, "conf": 2, "label": "Minnesota"}, {"id": 61, "conf": 6, "label": "MiamiOhio"}, {"id": 62, "conf": 9, "label": "Vanderbilt"}, {"id": 63, "conf": 10, "label": "MiddleTennesseeState"}, {"id": 64, "conf": 2, "label": "Illinois"}, {"id": 65, "conf": 9, "label": "MississippiState"}, {"id": 66, "conf": 4, "label": "Memphis"}, {"id": 67, "conf": 11, "label": "Nevada"}, {"id": 68, "conf": 8, "label": "Oregon"}, {"id": 69, "conf": 10, "label": "NewMexicoState"}, {"id": 70, "conf": 9, "label": "SouthCarolina"}, {"id": 71, "conf": 6, "label": "Ohio"}, {"id": 72, "conf": 3, "label": "IowaState"}, {"id": 73, "conf": 11, "label": "SanJoseState"}, {"id": 74, "conf": 3, "label": "Nebraska"}, {"id": 75, "conf": 4, "label": "SouthernMississippi"}, {"id": 76, "conf": 9, "label": "Tennessee"}, {"id": 77, "conf": 8, "label": "Stanford"}, {"id": 78, "conf": 8, "label": "WashingtonState"}, {"id": 79, "conf": 1, "label": "Temple"}, {"id": 80, "conf": 5, "label": "Navy"}, {"id": 81, "conf": 3, "label": "TexasA&M"}, {"id": 82, "conf": 5, "label": "NotreDame"}, {"id": 83, "conf": 11, "label": "TexasElPaso"}, {"id": 84, "conf": 3, "label": "Oklahoma"}, {"id": 85, "conf": 6, "label": "Toledo"}, {"id": 86, "conf": 4, "label": "Tulane"}, {"id": 87, "conf": 9, "label": "Mississippi"}, {"id": 88, "conf": 11, "label": "Tulsa"}, {"id": 89, "conf": 0, "label": "NorthCarolina"}, {"id": 90, "conf": 5, "label": "UtahState"}, {"id": 91, "conf": 4, "label": "Army"}, {"id": 92, "conf": 4, "label": "Cincinnati"}, {"id": 93, "conf": 7, "label": "AirForce"}, {"id": 94, "conf": 1, "label": "Rutgers"}, {"id": 95, "conf": 9, "label": "Georgia"}, {"id": 96, "conf": 9, "label": "LouisianaState"}, {"id": 97, "conf": 10, "label": "LouisianaLafayette"}, {"id": 98, "conf": 3, "label": "Texas"}, {"id": 99, "conf": 6, "label": "Marshall"}, {"id": 100, "conf": 2, "label": "MichiganState"}, {"id": 101, "conf": 1, "label": "MiamiFlorida"}, {"id": 102, "conf": 3, "label": "Missouri"}, {"id": 103, "conf": 0, "label": "Clemson"}, {"id": 104, "conf": 7, "label": "NevadaLasVegas"}, {"id": 105, "conf": 0, "label": "WakeForest"}, {"id": 106, "conf": 2, "label": "Indiana"}, {"id": 107, "conf": 3, "label": "OklahomaState"}, {"id": 108, "conf": 8, "label": "OregonState"}, {"id": 109, "conf": 0, "label": "Maryland"}, {"id": 110, "conf": 4, "label": "TexasChristian"}, {"id": 111, "conf": 8, "label": "California"}, {"id": 112, "conf": 4, "label": "AlabamaBirmingham"}, {"id": 113, "conf": 9, "label": "Arkansas"}, {"id": 114, "conf": 11, "label": "Hawaii"}];
+  const rawEdges = [{"s": 0, "t": 1}, {"s": 0, "t": 4}, {"s": 0, "t": 9}, {"s": 0, "t": 16}, {"s": 0, "t": 23}, {"s": 0, "t": 33}, {"s": 0, "t": 35}, {"s": 0, "t": 41}, {"s": 0, "t": 65}, {"s": 0, "t": 90}, {"s": 0, "t": 93}, {"s": 0, "t": 104}, {"s": 1, "t": 25}, {"s": 1, "t": 27}, {"s": 1, "t": 33}, {"s": 1, "t": 37}, {"s": 1, "t": 45}, {"s": 1, "t": 57}, {"s": 1, "t": 89}, {"s": 1, "t": 101}, {"s": 1, "t": 103}, {"s": 1, "t": 105}, {"s": 1, "t": 109}, {"s": 2, "t": 3}, {"s": 2, "t": 6}, {"s": 2, "t": 13}, {"s": 2, "t": 14}, {"s": 2, "t": 15}, {"s": 2, "t": 47}, {"s": 2, "t": 60}, {"s": 2, "t": 64}, {"s": 2, "t": 72}, {"s": 2, "t": 74}, {"s": 2, "t": 100}, {"s": 2, "t": 106}, {"s": 3, "t": 5}, {"s": 3, "t": 11}, {"s": 3, "t": 26}, {"s": 3, "t": 40}, {"s": 3, "t": 52}, {"s": 3, "t": 58}, {"s": 3, "t": 72}, {"s": 3, "t": 74}, {"s": 3, "t": 81}, {"s": 3, "t": 84}, {"s": 3, "t": 102}, {"s": 4, "t": 5}, {"s": 4, "t": 9}, {"s": 4, "t": 16}, {"s": 4, "t": 23}, {"s": 4, "t": 28}, {"s": 4, "t": 41}, {"s": 4, "t": 69}, {"s": 4, "t": 93}, {"s": 4, "t": 104}, {"s": 4, "t": 108}, {"s": 5, "t": 10}, {"s": 5, "t": 11}, {"s": 5, "t": 52}, {"s": 5, "t": 74}, {"s": 5, "t": 81}, {"s": 5, "t": 84}, {"s": 5, "t": 90}, {"s": 5, "t": 97}, {"s": 5, "t": 98}, {"s": 5, "t": 107}, {"s": 6, "t": 7}, {"s": 6, "t": 32}, {"s": 6, "t": 39}, {"s": 6, "t": 47}, {"s": 6, "t": 55}, {"s": 6, "t": 58}, {"s": 6, "t": 60}, {"s": 6, "t": 64}, {"s": 6, "t": 85}, {"s": 6, "t": 100}, {"s": 6, "t": 106}, {"s": 7, "t": 8}, {"s": 7, "t": 21}, {"s": 7, "t": 22}, {"s": 7, "t": 40}, {"s": 7, "t": 68}, {"s": 7, "t": 73}, {"s": 7, "t": 77}, {"s": 7, "t": 78}, {"s": 7, "t": 82}, {"s": 7, "t": 108}, {"s": 7, "t": 111}, {"s": 8, "t": 9}, {"s": 8, "t": 21}, {"s": 8, "t": 22}, {"s": 8, "t": 41}, {"s": 8, "t": 51}, {"s": 8, "t": 68}, {"s": 8, "t": 77}, {"s": 8, "t": 78}, {"s": 8, "t": 90}, {"s": 8, "t": 111}, {"s": 9, "t": 16}, {"s": 9, "t": 22}, {"s": 9, "t": 23}, {"s": 9, "t": 41}, {"s": 9, "t": 64}, {"s": 9, "t": 93}, {"s": 9, "t": 104}, {"s": 9, "t": 108}, {"s": 10, "t": 11}, {"s": 10, "t": 60}, {"s": 10, "t": 72}, {"s": 10, "t": 74}, {"s": 10, "t": 81}, {"s": 10, "t": 84}, {"s": 10, "t": 98}, {"s": 10, "t": 102}, {"s": 10, "t": 107}, {"s": 11, "t": 24}, {"s": 11, "t": 28}, {"s": 11, "t": 50}, {"s": 11, "t": 69}, {"s": 11, "t": 90}, {"s": 11, "t": 97}, {"s": 11, "t": 104}, {"s": 12, "t": 13}, {"s": 12, "t": 14}, {"s": 12, "t": 17}, {"s": 12, "t": 18}, {"s": 12, "t": 26}, {"s": 12, "t": 34}, {"s": 12, "t": 36}, {"s": 12, "t": 38}, {"s": 12, "t": 43}, {"s": 12, "t": 85}, {"s": 13, "t": 15}, {"s": 13, "t": 32}, {"s": 13, "t": 39}, {"s": 13, "t": 45}, {"s": 13, "t": 60}, {"s": 13, "t": 64}, {"s": 13, "t": 100}, {"s": 13, "t": 106}, {"s": 13, "t": 110}, {"s": 14, "t": 15}, {"s": 14, "t": 26}, {"s": 14, "t": 38}, {"s": 14, "t": 43}, {"s": 14, "t": 54}, {"s": 14, "t": 71}, {"s": 14, "t": 85}, {"s": 14, "t": 99}, {"s": 15, "t": 32}, {"s": 15, "t": 39}, {"s": 15, "t": 47}, {"s": 15, "t": 60}, {"s": 15, "t": 68}, {"s": 15, "t": 92}, {"s": 15, "t": 100}, {"s": 15, "t": 106}, {"s": 15, "t": 114}, {"s": 16, "t": 17}, {"s": 16, "t": 23}, {"s": 16, "t": 38}, {"s": 16, "t": 41}, {"s": 16, "t": 67}, {"s": 16, "t": 81}, {"s": 16, "t": 93}, {"s": 16, "t": 104}, {"s": 17, "t": 20}, {"s": 17, "t": 27}, {"s": 17, "t": 58}, {"s": 17, "t": 62}, {"s": 17, "t": 65}, {"s": 17, "t": 87}, {"s": 17, "t": 95}, {"s": 17, "t": 96}, {"s": 17, "t": 113}, {"s": 18, "t": 19}, {"s": 18, "t": 31}, {"s": 18, "t": 34}, {"s": 18, "t": 36}, {"s": 18, "t": 38}, {"s": 18, "t": 42}, {"s": 18, "t": 54}, {"s": 18, "t": 61}, {"s": 18, "t": 71}, {"s": 18, "t": 99}, {"s": 19, "t": 29}, {"s": 19, "t": 30}, {"s": 19, "t": 33}, {"s": 19, "t": 35}, {"s": 19, "t": 36}, {"s": 19, "t": 44}, {"s": 19, "t": 55}, {"s": 19, "t": 79}, {"s": 19, "t": 94}, {"s": 19, "t": 101}, {"s": 20, "t": 21}, {"s": 20, "t": 36}, {"s": 20, "t": 62}, {"s": 20, "t": 65}, {"s": 20, "t": 70}, {"s": 20, "t": 75}, {"s": 20, "t": 76}, {"s": 20, "t": 87}, {"s": 20, "t": 96}, {"s": 20, "t": 113}, {"s": 21, "t": 22}, {"s": 21, "t": 32}, {"s": 21, "t": 46}, {"s": 21, "t": 51}, {"s": 21, "t": 68}, {"s": 21, "t": 77}, {"s": 21, "t": 108}, {"s": 21, "t": 111}, {"s": 22, "t": 23}, {"s": 22, "t": 47}, {"s": 22, "t": 51}, {"s": 22, "t": 68}, {"s": 22, "t": 77}, {"s": 22, "t": 78}, {"s": 22, "t": 108}, {"s": 23, "t": 41}, {"s": 23, "t": 78}, {"s": 23, "t": 90}, {"s": 23, "t": 93}, {"s": 23, "t": 104}, {"s": 23, "t": 111}, {"s": 24, "t": 25}, {"s": 24, "t": 28}, {"s": 24, "t": 50}, {"s": 24, "t": 66}, {"s": 24, "t": 69}, {"s": 24, "t": 84}, {"s": 24, "t": 87}, {"s": 24, "t": 90}, {"s": 24, "t": 110}, {"s": 25, "t": 33}, {"s": 25, "t": 37}, {"s": 25, "t": 45}, {"s": 25, "t": 53}, {"s": 25, "t": 89}, {"s": 25, "t": 103}, {"s": 25, "t": 105}, {"s": 25, "t": 106}, {"s": 25, "t": 109}, {"s": 26, "t": 27}, {"s": 26, "t": 34}, {"s": 26, "t": 38}, {"s": 26, "t": 42}, {"s": 26, "t": 43}, {"s": 26, "t": 61}, {"s": 26, "t": 85}, {"s": 27, "t": 56}, {"s": 27, "t": 62}, {"s": 27, "t": 63}, {"s": 27, "t": 65}, {"s": 27, "t": 70}, {"s": 27, "t": 76}, {"s": 27, "t": 95}, {"s": 27, "t": 96}, {"s": 28, "t": 38}, {"s": 28, "t": 50}, {"s": 28, "t": 69}, {"s": 28, "t": 78}, {"s": 28, "t": 90}, {"s": 28, "t": 113}, {"s": 29, "t": 30}, {"s": 29, "t": 35}, {"s": 29, "t": 42}, {"s": 29, "t": 55}, {"s": 29, "t": 79}, {"s": 29, "t": 80}, {"s": 29, "t": 82}, {"s": 29, "t": 91}, {"s": 29, "t": 94}, {"s": 29, "t": 101}, {"s": 30, "t": 35}, {"s": 30, "t": 44}, {"s": 30, "t": 50}, {"s": 30, "t": 55}, {"s": 30, "t": 79}, {"s": 30, "t": 82}, {"s": 30, "t": 94}, {"s": 30, "t": 101}, {"s": 30, "t": 109}, {"s": 31, "t": 32}, {"s": 31, "t": 34}, {"s": 31, "t": 43}, {"s": 31, "t": 54}, {"s": 31, "t": 55}, {"s": 31, "t": 61}, {"s": 31, "t": 71}, {"s": 31, "t": 79}, {"s": 31, "t": 85}, {"s": 31, "t": 99}, {"s": 32, "t": 39}, {"s": 32, "t": 47}, {"s": 32, "t": 49}, {"s": 32, "t": 64}, {"s": 32, "t": 100}, {"s": 32, "t": 106}, {"s": 33, "t": 37}, {"s": 33, "t": 45}, {"s": 33, "t": 89}, {"s": 33, "t": 103}, {"s": 33, "t": 105}, {"s": 33, "t": 109}, {"s": 34, "t": 35}, {"s": 34, "t": 42}, {"s": 34, "t": 54}, {"s": 34, "t": 61}, {"s": 34, "t": 71}, {"s": 34, "t": 94}, {"s": 34, "t": 99}, {"s": 35, "t": 44}, {"s": 35, "t": 55}, {"s": 35, "t": 79}, {"s": 35, "t": 92}, {"s": 35, "t": 94}, {"s": 35, "t": 101}, {"s": 36, "t": 37}, {"s": 36, "t": 43}, {"s": 36, "t": 58}, {"s": 36, "t": 59}, {"s": 37, "t": 45}, {"s": 37, "t": 80}, {"s": 37, "t": 89}, {"s": 37, "t": 95}, {"s": 37, "t": 103}, {"s": 37, "t": 105}, {"s": 37, "t": 109}, {"s": 38, "t": 39}, {"s": 38, "t": 43}, {"s": 38, "t": 54}, {"s": 38, "t": 71}, {"s": 38, "t": 85}, {"s": 39, "t": 47}, {"s": 39, "t": 54}, {"s": 39, "t": 60}, {"s": 39, "t": 82}, {"s": 39, "t": 100}, {"s": 39, "t": 106}, {"s": 40, "t": 41}, {"s": 40, "t": 51}, {"s": 40, "t": 52}, {"s": 40, "t": 72}, {"s": 40, "t": 74}, {"s": 40, "t": 81}, {"s": 40, "t": 98}, {"s": 40, "t": 102}, {"s": 40, "t": 107}, {"s": 41, "t": 67}, {"s": 41, "t": 93}, {"s": 41, "t": 104}, {"s": 42, "t": 43}, {"s": 42, "t": 57}, {"s": 42, "t": 63}, {"s": 43, "t": 61}, {"s": 43, "t": 70}, {"s": 43, "t": 79}, {"s": 43, "t": 85}, {"s": 44, "t": 45}, {"s": 44, "t": 48}, {"s": 44, "t": 57}, {"s": 44, "t": 66}, {"s": 44, "t": 75}, {"s": 44, "t": 86}, {"s": 44, "t": 91}, {"s": 44, "t": 112}, {"s": 45, "t": 62}, {"s": 45, "t": 89}, {"s": 45, "t": 103}, {"s": 45, "t": 105}, {"s": 45, "t": 109}, {"s": 46, "t": 47}, {"s": 46, "t": 49}, {"s": 46, "t": 53}, {"s": 46, "t": 67}, {"s": 46, "t": 73}, {"s": 46, "t": 83}, {"s": 46, "t": 88}, {"s": 46, "t": 110}, {"s": 46, "t": 111}, {"s": 46, "t": 114}, {"s": 47, "t": 60}, {"s": 47, "t": 61}, {"s": 47, "t": 64}, {"s": 47, "t": 100}, {"s": 48, "t": 49}, {"s": 48, "t": 53}, {"s": 48, "t": 57}, {"s": 48, "t": 66}, {"s": 48, "t": 75}, {"s": 48, "t": 86}, {"s": 48, "t": 91}, {"s": 48, "t": 92}, {"s": 48, "t": 96}, {"s": 48, "t": 98}, {"s": 49, "t": 53}, {"s": 49, "t": 67}, {"s": 49, "t": 73}, {"s": 49, "t": 83}, {"s": 49, "t": 84}, {"s": 49, "t": 88}, {"s": 49, "t": 110}, {"s": 49, "t": 114}, {"s": 50, "t": 51}, {"s": 50, "t": 68}, {"s": 50, "t": 69}, {"s": 50, "t": 78}, {"s": 50, "t": 90}, {"s": 51, "t": 68}, {"s": 51, "t": 77}, {"s": 51, "t": 78}, {"s": 51, "t": 101}, {"s": 51, "t": 108}, {"s": 51, "t": 111}, {"s": 52, "t": 53}, {"s": 52, "t": 72}, {"s": 52, "t": 74}, {"s": 52, "t": 84}, {"s": 52, "t": 98}, {"s": 52, "t": 102}, {"s": 52, "t": 112}, {"s": 53, "t": 67}, {"s": 53, "t": 73}, {"s": 53, "t": 83}, {"s": 53, "t": 86}, {"s": 53, "t": 88}, {"s": 53, "t": 110}, {"s": 53, "t": 114}, {"s": 54, "t": 55}, {"s": 54, "t": 61}, {"s": 54, "t": 71}, {"s": 54, "t": 99}, {"s": 55, "t": 79}, {"s": 55, "t": 89}, {"s": 55, "t": 94}, {"s": 55, "t": 101}, {"s": 56, "t": 57}, {"s": 56, "t": 62}, {"s": 56, "t": 65}, {"s": 56, "t": 70}, {"s": 56, "t": 76}, {"s": 56, "t": 87}, {"s": 56, "t": 95}, {"s": 56, "t": 96}, {"s": 56, "t": 106}, {"s": 57, "t": 75}, {"s": 57, "t": 86}, {"s": 57, "t": 91}, {"s": 57, "t": 92}, {"s": 57, "t": 112}, {"s": 58, "t": 59}, {"s": 58, "t": 63}, {"s": 58, "t": 88}, {"s": 58, "t": 97}, {"s": 58, "t": 101}, {"s": 58, "t": 114}, {"s": 59, "t": 60}, {"s": 59, "t": 63}, {"s": 59, "t": 66}, {"s": 59, "t": 76}, {"s": 59, "t": 97}, {"s": 59, "t": 113}, {"s": 60, "t": 64}, {"s": 60, "t": 71}, {"s": 60, "t": 106}, {"s": 61, "t": 62}, {"s": 61, "t": 71}, {"s": 61, "t": 92}, {"s": 61, "t": 99}, {"s": 62, "t": 70}, {"s": 62, "t": 76}, {"s": 62, "t": 87}, {"s": 62, "t": 95}, {"s": 62, "t": 105}, {"s": 63, "t": 64}, {"s": 63, "t": 65}, {"s": 63, "t": 97}, {"s": 63, "t": 109}, {"s": 63, "t": 112}, {"s": 64, "t": 100}, {"s": 64, "t": 106}, {"s": 64, "t": 111}, {"s": 65, "t": 66}, {"s": 65, "t": 70}, {"s": 65, "t": 87}, {"s": 65, "t": 96}, {"s": 65, "t": 113}, {"s": 66, "t": 75}, {"s": 66, "t": 76}, {"s": 66, "t": 86}, {"s": 66, "t": 91}, {"s": 66, "t": 92}, {"s": 66, "t": 112}, {"s": 67, "t": 68}, {"s": 67, "t": 73}, {"s": 67, "t": 83}, {"s": 67, "t": 88}, {"s": 67, "t": 104}, {"s": 67, "t": 110}, {"s": 67, "t": 114}, {"s": 68, "t": 78}, {"s": 68, "t": 108}, {"s": 68, "t": 111}, {"s": 69, "t": 70}, {"s": 69, "t": 83}, {"s": 69, "t": 88}, {"s": 69, "t": 90}, {"s": 69, "t": 91}, {"s": 69, "t": 95}, {"s": 70, "t": 76}, {"s": 70, "t": 95}, {"s": 70, "t": 103}, {"s": 70, "t": 113}, {"s": 71, "t": 72}, {"s": 71, "t": 99}, {"s": 72, "t": 74}, {"s": 72, "t": 81}, {"s": 72, "t": 102}, {"s": 72, "t": 104}, {"s": 72, "t": 107}, {"s": 73, "t": 74}, {"s": 73, "t": 77}, {"s": 73, "t": 83}, {"s": 73, "t": 88}, {"s": 73, "t": 110}, {"s": 73, "t": 114}, {"s": 74, "t": 82}, {"s": 74, "t": 84}, {"s": 74, "t": 102}, {"s": 75, "t": 76}, {"s": 75, "t": 86}, {"s": 75, "t": 92}, {"s": 75, "t": 107}, {"s": 75, "t": 112}, {"s": 76, "t": 95}, {"s": 76, "t": 96}, {"s": 76, "t": 113}, {"s": 77, "t": 78}, {"s": 77, "t": 82}, {"s": 77, "t": 98}, {"s": 77, "t": 108}, {"s": 77, "t": 111}, {"s": 78, "t": 108}, {"s": 78, "t": 111}, {"s": 79, "t": 80}, {"s": 79, "t": 94}, {"s": 79, "t": 101}, {"s": 79, "t": 109}, {"s": 80, "t": 82}, {"s": 80, "t": 85}, {"s": 80, "t": 86}, {"s": 80, "t": 91}, {"s": 80, "t": 93}, {"s": 80, "t": 94}, {"s": 80, "t": 105}, {"s": 80, "t": 110}, {"s": 81, "t": 82}, {"s": 81, "t": 83}, {"s": 81, "t": 84}, {"s": 81, "t": 98}, {"s": 81, "t": 107}, {"s": 82, "t": 93}, {"s": 82, "t": 94}, {"s": 82, "t": 100}, {"s": 83, "t": 84}, {"s": 83, "t": 88}, {"s": 83, "t": 110}, {"s": 83, "t": 114}, {"s": 84, "t": 98}, {"s": 84, "t": 107}, {"s": 85, "t": 99}, {"s": 86, "t": 87}, {"s": 86, "t": 91}, {"s": 86, "t": 92}, {"s": 86, "t": 97}, {"s": 87, "t": 95}, {"s": 87, "t": 96}, {"s": 87, "t": 104}, {"s": 87, "t": 113}, {"s": 88, "t": 89}, {"s": 88, "t": 107}, {"s": 88, "t": 110}, {"s": 88, "t": 114}, {"s": 89, "t": 99}, {"s": 89, "t": 103}, {"s": 89, "t": 105}, {"s": 89, "t": 109}, {"s": 91, "t": 92}, {"s": 91, "t": 93}, {"s": 91, "t": 112}, {"s": 92, "t": 106}, {"s": 92, "t": 112}, {"s": 93, "t": 104}, {"s": 94, "t": 101}, {"s": 95, "t": 113}, {"s": 96, "t": 112}, {"s": 96, "t": 113}, {"s": 97, "t": 98}, {"s": 97, "t": 112}, {"s": 98, "t": 102}, {"s": 98, "t": 107}, {"s": 99, "t": 100}, {"s": 100, "t": 102}, {"s": 102, "t": 103}, {"s": 102, "t": 107}, {"s": 103, "t": 105}, {"s": 103, "t": 109}, {"s": 104, "t": 114}, {"s": 105, "t": 109}, {"s": 108, "t": 111}, {"s": 110, "t": 114}];
+  const nodes = rawNodes.map(n => ({
+    id: n.id, label: n.label, conf: n.conf,
+    color: conf_colors[n.conf], confName: conf_names[n.conf]
+  }));
+  const edges = rawEdges.map(e => ({ s: e.s, t: e.t }));
+  return { nodes, edges, conf_colors, conf_names };
+}
+
+// ═══════════════════════════════════════════════════════
+// GRAPH METRICS
+// ═══════════════════════════════════════════════════════
+
+function computeMetrics(nodes, edges) {
+  const N = nodes.length;
+  const deg = new Array(N).fill(0);
+  const adj = Array.from({length: N}, () => []);
+
+  for (const { s, t } of edges) {
+    deg[s]++; deg[t]++;
+    adj[s].push(t); adj[t].push(s);
+  }
+
+  const meanK = deg.reduce((a,b) => a+b, 0) / N;
+  const k2 = deg.reduce((a,b) => a + b*b, 0) / N;
+  const kFriend = k2 / meanK;
+
+  const knn = nodes.map((_, i) => {
+    if (deg[i] === 0) return 0;
+    return adj[i].reduce((s, j) => s + deg[j], 0) / deg[i];
+  });
+  const meanKnn = knn.reduce((a,b) => a+b, 0) / N;
+
+  // hub centrality hi = fraction of neighbors with degree < ki
+  const hi = nodes.map((_, i) => {
+    if (deg[i] === 0) return 0;
+    const lower = adj[i].filter(j => deg[j] < deg[i]).length;
+    return lower / deg[i];
+  });
+
+  // phi_global: fraction where ki < knn(i)
+  const phiGlobal = nodes.filter((_, i) => deg[i] > 0 && deg[i] < knn[i]).length / N;
+
+  // phi_local: fraction where hi < 0.5
+  const phiLocal = nodes.filter((_, i) => deg[i] > 0 && hi[i] < 0.5).length / N;
+
+  // covariance Cov(k, knn)
+  const covKKnn = (deg.reduce((s, ki, i) => s + ki * knn[i], 0) / N) - meanK * meanKnn;
+
+  return { deg, adj, knn, hi, meanK, kFriend, meanKnn, covKKnn, phiGlobal, phiLocal };
+}
+
+// ═══════════════════════════════════════════════════════
+// FRUCHTERMAN-REINGOLD SPRING LAYOUT
+// ═══════════════════════════════════════════════════════
+
+class ForceLayout {
+  constructor(nodes, edges, width, height) {
+    this.N = nodes.length;
+    this.width = width; this.height = height;
+    this.x = new Float64Array(this.N);
+    this.y = new Float64Array(this.N);
+    this.dx = new Float64Array(this.N);
+    this.dy = new Float64Array(this.N);
+    this.edges = edges;
+    // FR temperature: starts high, cools each step
+    this.temp = Math.min(width, height) * 0.15;
+    this.cooling = 0.97;   // multiply temp each step
+    this.minTemp = 0.5;
+    this._pinned = -1;
+    // Optimal spring length: classic FR formula
+    this._k = Math.sqrt((width * height) / Math.max(this.N, 1));
+    // vx/vy kept for drag compatibility
+    this.vx = new Float64Array(this.N);
+    this.vy = new Float64Array(this.N);
+  }
+
+  initPositions() {
+    // Place on a circle with a small random jitter so FR has something to work with
+    const r = Math.min(this.width, this.height) * 0.35;
+    for (let i = 0; i < this.N; i++) {
+      const angle = (2 * Math.PI * i) / this.N - Math.PI / 2;
+      this.x[i] = this.width  / 2 + r * Math.cos(angle) + (Math.random() - 0.5) * 5;
+      this.y[i] = this.height / 2 + r * Math.sin(angle) + (Math.random() - 0.5) * 5;
+    }
+  }
+
+  // Run `n` FR iterations synchronously (used for pre-warm before first paint)
+  warmUp(n) {
+    for (let iter = 0; iter < n; iter++) this.step();
+  }
+
+  step() {
+    if (this.N === 0) return;
+    const k = this._k;
+    const k2 = k * k;
+
+    // Reset displacement accumulators
+    this.dx.fill(0); this.dy.fill(0);
+
+    // ── Repulsive forces (all pairs) ──
+    for (let i = 0; i < this.N; i++) {
+      for (let j = i + 1; j < this.N; j++) {
+        let ddx = this.x[i] - this.x[j];
+        let ddy = this.y[i] - this.y[j];
+        const dist = Math.sqrt(ddx * ddx + ddy * ddy) || 0.01;
+        // fr(d) = k² / d
+        const fr = k2 / dist;
+        const fx = fr * ddx / dist;
+        const fy = fr * ddy / dist;
+        this.dx[i] += fx; this.dy[i] += fy;
+        this.dx[j] -= fx; this.dy[j] -= fy;
+      }
+    }
+
+    // ── Attractive forces (edges) ──
+    for (const { s, t } of this.edges) {
+      const ddx = this.x[t] - this.x[s];
+      const ddy = this.y[t] - this.y[s];
+      const dist = Math.sqrt(ddx * ddx + ddy * ddy) || 0.01;
+      // fa(d) = d² / k
+      const fa = (dist * dist) / k;
+      const fx = fa * ddx / dist;
+      const fy = fa * ddy / dist;
+      this.dx[s] += fx; this.dy[s] += fy;
+      this.dx[t] -= fx; this.dy[t] -= fy;
+    }
+
+    // ── Weak gravity toward center (prevents drift) ──
+    const cx = this.x.reduce((a, b) => a + b, 0) / this.N;
+    const cy = this.y.reduce((a, b) => a + b, 0) / this.N;
+    const grav = k * 0.08;
+    for (let i = 0; i < this.N; i++) {
+      this.dx[i] += (this.width  / 2 - cx) * grav / this.width;
+      this.dy[i] += (this.height / 2 - cy) * grav / this.height;
+    }
+
+    // ── Apply displacement, capped at temperature ──
+    const t = Math.max(this.temp, this.minTemp);
+    const pad = 20;
+    for (let i = 0; i < this.N; i++) {
+      if (this._pinned === i) continue;
+      const disp = Math.sqrt(this.dx[i] * this.dx[i] + this.dy[i] * this.dy[i]) || 0.01;
+      const scale = Math.min(disp, t) / disp;
+      this.x[i] = Math.max(pad, Math.min(this.width  - pad, this.x[i] + this.dx[i] * scale));
+      this.y[i] = Math.max(pad, Math.min(this.height - pad, this.y[i] + this.dy[i] * scale));
+    }
+
+    // ── Cool ──
+    if (this.temp > this.minTemp) this.temp *= this.cooling;
+  }
+
+  // Reheat slightly when user drags (so graph can readjust)
+  reheat(amount = 20) {
+    this.temp = Math.max(this.temp, amount);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDERER
+// ═══════════════════════════════════════════════════════
+
+const svg = document.getElementById('network-svg');
+const tooltip = document.getElementById('tooltip');
+let currentGraph = null;
+let layout = null;
+let metrics = null;
+let animFrame = null;
+let selectedForEdge = null;
+let currentNet = 'toy';
+
+const NS = 'http://www.w3.org/2000/svg';
+
+function nodeColor(i, m) {
+  const meanDom = m.deg[i] > 0 && m.deg[i] < m.knn[i];
+  const medDom  = m.deg[i] > 0 && m.hi[i] < 0.5;
+  if (meanDom && medDom) return '#7C3AED';
+  if (meanDom) return '#2563EB';
+  if (medDom)  return '#D97706';
+  return '#059669';
+}
+
+// For AFB: fill = conference color, stroke encodes domination
+function nodeStroke(i, m) {
+  const meanDom = m.deg[i] > 0 && m.deg[i] < m.knn[i];
+  const medDom  = m.deg[i] > 0 && m.hi[i] < 0.5;
+  if (meanDom && medDom) return ['#7C3AED', 2.5];
+  if (meanDom) return ['#2563EB', 2.5];
+  if (medDom)  return ['#D97706', 2.5];
+  return ['#059669', 2.5];
+}
+
+function buildSVG(g, lay, m) {
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  // Defs: arrowhead (not needed for undirected, but add glow filter)
+  const defs = document.createElementNS(NS, 'defs');
+  const filt = document.createElementNS(NS, 'filter');
+  filt.setAttribute('id', 'glow');
+  const feBlur = document.createElementNS(NS, 'feGaussianBlur');
+  feBlur.setAttribute('stdDeviation', '3'); feBlur.setAttribute('result', 'blur');
+  const feMerge = document.createElementNS(NS, 'feMerge');
+  ['blur', 'SourceGraphic'].forEach(n => {
+    const mn = document.createElementNS(NS, 'feMergeNode');
+    if (n === 'blur') mn.setAttribute('in', 'blur');
+    feMerge.appendChild(mn);
+  });
+  filt.appendChild(feBlur); filt.appendChild(feMerge);
+  defs.appendChild(filt);
+  svg.appendChild(defs);
+
+  // Edge layer
+  const edgeGroup = document.createElementNS(NS, 'g');
+  edgeGroup.setAttribute('id', 'edge-layer');
+  svg.appendChild(edgeGroup);
+
+  // Node layer
+  const nodeGroup = document.createElementNS(NS, 'g');
+  nodeGroup.setAttribute('id', 'node-layer');
+  svg.appendChild(nodeGroup);
+
+  renderEdges(g.edges, lay, edgeGroup);
+  renderNodes(g.nodes, lay, m, nodeGroup);
+}
+
+function renderEdges(edges, lay, group) {
+  while (group.firstChild) group.removeChild(group.firstChild);
+  for (const { s, t } of edges) {
+    const line = document.createElementNS(NS, 'line');
+    line.setAttribute('x1', lay.x[s]); line.setAttribute('y1', lay.y[s]);
+    line.setAttribute('x2', lay.x[t]); line.setAttribute('y2', lay.y[t]);
+    line.setAttribute('stroke', '#1E2D42');
+    line.setAttribute('stroke-width', currentGraph.nodes.length > 50 ? '0.8' : '1.5');
+    group.appendChild(line);
+  }
+}
+
+function renderNodes(nodes, lay, m, group) {
+  while (group.firstChild) group.removeChild(group.firstChild);
+  const isAFB = currentNet === 'afb';
+  const r = nodes.length > 80 ? 5 : nodes.length > 30 ? 5.5 : 11;
+
+  for (let i = 0; i < nodes.length; i++) {
+    const g = document.createElementNS(NS, 'g');
+    g.setAttribute('transform', `translate(${lay.x[i]},${lay.y[i]})`);
+    g.dataset.idx = i;
+    g.style.cursor = 'pointer';
+
+    const circle = document.createElementNS(NS, 'circle');
+    circle.setAttribute('r', r);
+
+    if (isAFB && nodes[i].color) {
+      // Fill = conference color; outer ring = domination category
+      circle.setAttribute('fill', nodes[i].color);
+      const [strokeColor, sw] = nodeStroke(i, m);
+      circle.setAttribute('stroke', strokeColor);
+      circle.setAttribute('stroke-width', sw);
+      circle.setAttribute('fill-opacity', '0.85');
+    } else {
+      circle.setAttribute('fill', nodeColor(i, m));
+      circle.setAttribute('stroke', '#080C12');
+      circle.setAttribute('stroke-width', '1.5');
+    }
+    g.appendChild(circle);
+
+    if (nodes.length <= 20) {
+      const text = document.createElementNS(NS, 'text');
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('dominant-baseline', 'central');
+      text.setAttribute('fill', '#EAF2FF');
+      text.setAttribute('font-size', '8');
+      text.setAttribute('font-family', 'IBM Plex Mono');
+      text.setAttribute('pointer-events', 'none');
+      text.textContent = nodes[i].label;
+      g.appendChild(text);
+    }
+
+    g.addEventListener('mouseenter', (e) => showTooltip(e, i));
+    g.addEventListener('mousemove', (e) => moveTooltip(e));
+    g.addEventListener('mouseleave', hideTooltip);
+    g.addEventListener('mousedown', (e) => startDrag(e, i));
+    g.addEventListener('click', (e) => handleNodeClick(i));
+    group.appendChild(g);
+  }
+}
+
+function updatePositions() {
+  const edgeGroup = document.getElementById('edge-layer');
+  const nodeGroup = document.getElementById('node-layer');
+  if (!edgeGroup || !nodeGroup) return;
+
+  const edges = edgeGroup.children;
+  currentGraph.edges.forEach(({ s, t }, i) => {
+    if (edges[i]) {
+      edges[i].setAttribute('x1', layout.x[s]); edges[i].setAttribute('y1', layout.y[s]);
+      edges[i].setAttribute('x2', layout.x[t]); edges[i].setAttribute('y2', layout.y[t]);
+    }
+  });
+
+  const nodes = nodeGroup.children;
+  for (let i = 0; i < currentGraph.nodes.length; i++) {
+    if (nodes[i]) {
+      nodes[i].setAttribute('transform', `translate(${layout.x[i]},${layout.y[i]})`);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// TOOLTIP
+// ═══════════════════════════════════════════════════════
+
+function showTooltip(e, i) {
+  if (!metrics) return;
+  const m = metrics;
+  const node = currentGraph.nodes[i];
+  // Title: team name for AFB, "Node N" otherwise
+  document.getElementById('tt-name').textContent = node.label || `Node ${i+1}`;
+  // Conference row: show for AFB only
+  const confRow = document.getElementById('tt-conf-row');
+  if (currentNet === 'afb' && node.confName) {
+    document.getElementById('tt-conf').textContent = node.confName;
+    confRow.style.display = '';
+  } else {
+    confRow.style.display = 'none';
+  }
+  document.getElementById('tt-ki').textContent = m.deg[i];
+  document.getElementById('tt-knn').textContent = m.knn[i].toFixed(3);
+  document.getElementById('tt-hi').textContent = m.hi[i].toFixed(3);
+  document.getElementById('tt-mean-dom').textContent = (m.deg[i] > 0 && m.deg[i] < m.knn[i]) ? 'yes' : 'no';
+  document.getElementById('tt-med-dom').textContent = (m.deg[i] > 0 && m.hi[i] < 0.5) ? 'yes' : 'no';
+  tooltip.classList.add('visible');
+  moveTooltip(e);
+}
+function moveTooltip(e) {
+  const rect = svg.getBoundingClientRect();
+  let x = e.clientX - rect.left + 14, y = e.clientY - rect.top - 10;
+  if (x + 230 > rect.width) x = e.clientX - rect.left - 240;
+  tooltip.style.left = x + 'px'; tooltip.style.top = y + 'px';
+}
+function hideTooltip() { tooltip.classList.remove('visible'); }
+
+// ═══════════════════════════════════════════════════════
+// DRAG
+// ═══════════════════════════════════════════════════════
+
+let dragIdx = -1;
+function startDrag(e, i) {
+  e.stopPropagation();
+  dragIdx = i;
+  if (currentNet !== 'custom') {
+    layout._pinned = i;
+    layout.reheat(18);
+  }
+}
+svg.addEventListener('mousemove', e => {
+  if (dragIdx < 0) return;
+  const rect = svg.getBoundingClientRect();
+  layout.x[dragIdx] = e.clientX - rect.left;
+  layout.y[dragIdx] = e.clientY - rect.top;
+  if (currentNet === 'custom') updatePositions(); // immediate update, no spring
+});
+svg.addEventListener('mouseup', () => { dragIdx = -1; layout && (layout._pinned = -1); });
+
+// ═══════════════════════════════════════════════════════
+// CUSTOM NETWORK
+// ═══════════════════════════════════════════════════════
+
+function handleNodeClick(i) {
+  if (currentNet !== 'custom') return;
+  if (selectedForEdge === null) {
+    selectedForEdge = i;
+    highlightSelected(i, true);
+  } else if (selectedForEdge === i) {
+    selectedForEdge = null;
+    highlightSelected(i, false);
+  } else {
+    const s = Math.min(selectedForEdge, i), t = Math.max(selectedForEdge, i);
+    const existing = currentGraph.edges.findIndex(e => e.s === s && e.t === t);
+    highlightSelected(selectedForEdge, false);
+    selectedForEdge = null;
+    if (existing >= 0) currentGraph.edges.splice(existing, 1);
+    else currentGraph.edges.push({ s, t });
+    layout.edges = currentGraph.edges;
+    metrics = computeMetrics(currentGraph.nodes, currentGraph.edges);
+    updateMetricsUI(metrics);
+    buildSVG(currentGraph, layout, metrics);
+    // no reheat — custom stays static
+  }
+}
+
+function highlightSelected(i, on) {
+  const nodeGroup = document.getElementById('node-layer');
+  if (!nodeGroup || !nodeGroup.children[i]) return;
+  const circle = nodeGroup.children[i].querySelector('circle');
+  if (circle) circle.setAttribute('stroke', on ? '#F59E0B' : '#080C12');
+  circle && (circle.setAttribute('stroke-width', on ? '3' : '1.5'));
+}
+
+svg.addEventListener('click', e => {
+  if (currentNet !== 'custom') return;
+  // Only fire on the bare canvas (not on node groups)
+  const hit = e.target.closest('[data-idx]');
+  if (hit) return; // node click handled by handleNodeClick
+  // Background click: deselect if something is selected, otherwise add a node
+  if (selectedForEdge !== null) {
+    highlightSelected(selectedForEdge, false);
+    selectedForEdge = null;
+    return;
+  }
+  const rect = svg.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  const id = currentGraph.nodes.length;
+  currentGraph.nodes.push({ id, label: String(id + 1) });
+  // Extend position arrays — keep as plain arrays then rebuild Float64Array
+  const xs = Array.from(layout.x); xs.push(x);
+  const ys = Array.from(layout.y); ys.push(y);
+  layout.x = new Float64Array(xs);
+  layout.y = new Float64Array(ys);
+  layout.dx = new Float64Array(xs.length);
+  layout.dy = new Float64Array(xs.length);
+  layout.vx = new Float64Array(xs.length);
+  layout.vy = new Float64Array(xs.length);
+  layout.N = currentGraph.nodes.length;
+  metrics = computeMetrics(currentGraph.nodes, currentGraph.edges);
+  updateMetricsUI(metrics);
+  buildSVG(currentGraph, layout, metrics);
+});
+
+document.getElementById('btn-clear').addEventListener('click', () => {
+  if (currentNet !== 'custom') return;
+  currentGraph = { nodes: [], edges: [] };
+  selectedForEdge = null;
+  layout.N = 0;
+  layout.x = new Float64Array(0); layout.y = new Float64Array(0);
+  layout.dx = new Float64Array(0); layout.dy = new Float64Array(0);
+  layout.vx = new Float64Array(0); layout.vy = new Float64Array(0);
+  layout.temp = layout.minTemp; // freeze
+  metrics = computeMetrics([], []);
+  updateMetricsUI(metrics);
+  buildSVG(currentGraph, layout, metrics);
+});
+
+document.getElementById('btn-star').addEventListener('click', () => loadCustomPreset('star'));
+document.getElementById('btn-ring').addEventListener('click', () => loadCustomPreset('ring'));
+
+function loadCustomPreset(type) {
+  if (currentNet !== 'custom') return;
+  selectedForEdge = null;
+  if (type === 'star') {
+    currentGraph = { nodes: [0,1,2,3,4].map(i=>({id:i,label:String(i+1)})), edges: [[0,1],[0,2],[0,3],[0,4]].map(([s,t])=>({s,t})) };
+  } else if (type === 'ring') {
+    currentGraph = { nodes: [0,1,2,3,4,5].map(i=>({id:i,label:String(i+1)})), edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0]].map(([s,t])=>({s,t})) };
+  }
+  const W = svg.clientWidth, H = svg.clientHeight;
+  const N = currentGraph.nodes.length;
+  const r = Math.min(W, H) * 0.32;
+  const xs = Array.from({length: N}, (_, i) => W/2 + r * Math.cos(2*Math.PI*i/N - Math.PI/2));
+  const ys = Array.from({length: N}, (_, i) => H/2 + r * Math.sin(2*Math.PI*i/N - Math.PI/2));
+  layout.N = N;
+  layout.x = new Float64Array(xs); layout.y = new Float64Array(ys);
+  layout.dx = new Float64Array(N); layout.dy = new Float64Array(N);
+  layout.vx = new Float64Array(N); layout.vy = new Float64Array(N);
+  layout.edges = currentGraph.edges;
+  layout.temp = layout.minTemp; // static — no spring
+  metrics = computeMetrics(currentGraph.nodes, currentGraph.edges);
+  updateMetricsUI(metrics);
+  buildSVG(currentGraph, layout, metrics);
+}
+
+// ═══════════════════════════════════════════════════════
+// METRICS UI
+// ═══════════════════════════════════════════════════════
+
+function fmt(v, digits=3) { return isNaN(v) ? '—' : v.toFixed(digits); }
+
+function updateMetricsUI(m) {
+  if (!m || m.deg.length === 0) {
+    ['m-mean-k','m-kfriend','m-knn','m-phi-global','m-phi-local'].forEach(id => {
+      document.getElementById(id).textContent = '—';
+    });
+    document.getElementById('m-cov-eq').textContent = '—';
+    return;
+  }
+
+  document.getElementById('m-mean-k').textContent = fmt(m.meanK);
+
+  // kfriend
+  document.getElementById('m-kfriend').textContent = fmt(m.kFriend);
+  const alterOk = m.kFriend >= m.meanK;
+  setbadge('b-alter', alterOk ? `≥ ⟨k⟩` : `< ⟨k⟩`, alterOk);
+
+  // knn
+  document.getElementById('m-knn').textContent = fmt(m.meanKnn);
+  const egoOk = m.meanKnn >= m.meanK;
+  setbadge('b-ego', egoOk ? `≥ ⟨k⟩` : `< ⟨k⟩`, egoOk);
+
+  // covariance
+  const diff = m.kFriend - m.meanKnn;
+  const covVal = m.covKKnn;
+  const covFmt = covVal >= 0 ? `+${fmt(covVal)}` : fmt(covVal);
+  const diffFmt = diff >= 0 ? `+${fmt(diff)}` : fmt(diff);
+  let cls = diff > 0.001 ? 'pos' : diff < -0.001 ? 'neg' : 'neu';
+  let mixing = diff > 0.001 ? 'assortative' : diff < -0.001 ? 'disassortative' : 'neutral';
+  document.getElementById('m-cov-eq').innerHTML =
+    `⟨k_friend⟩ − ⟨k_nn⟩ = <span class="${cls}">${diffFmt}</span> &nbsp;|&nbsp; Cov/⟨k⟩ = <span class="${cls}">${fmt(covVal/m.meanK)}</span> <em style="color:var(--text-dim)"> (${mixing})</em>`;
+
+  // phi_global
+  document.getElementById('m-phi-global').textContent = fmt(m.phiGlobal, 3);
+  setbadge('b-global', m.phiGlobal > 0.5 ? '> ½' : '< ½', m.phiGlobal > 0.5);
+
+  // phi_local
+  document.getElementById('m-phi-local').textContent = fmt(m.phiLocal, 3);
+  setbadge('b-local', m.phiLocal > 0.5 ? '> ½' : '< ½', m.phiLocal > 0.5);
+}
+
+function setbadge(id, text, yes) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'badge ' + (yes ? 'badge-yes' : 'badge-no');
+}
+
+// ═══════════════════════════════════════════════════════
+// NETWORK LOADING
+// ═══════════════════════════════════════════════════════
+
+function loadNetwork(netId) {
+  cancelAnimationFrame(animFrame);
+  currentNet = netId;
+  selectedForEdge = null;
+
+  document.getElementById('custom-controls').style.display = netId === 'custom' ? '' : 'none';
+  document.getElementById('canvas-hint').textContent =
+    netId === 'custom' ? 'Click canvas to add nodes · click two nodes to connect them'
+                       : 'Hover nodes to inspect · drag to reposition';
+
+  // Toggle conference legend for AFB
+  const isAFB = netId === 'afb';
+  document.getElementById('legend-conferences').style.display = isAFB ? '' : 'none';
+  document.getElementById('legend-afb-note').style.display = isAFB ? '' : 'none';
+  if (isAFB) {
+    const g = afbGraph();
+    const rows = document.getElementById('conf-legend-rows');
+    rows.innerHTML = '';
+    g.conf_names.forEach((name, ci) => {
+      const div = document.createElement('div');
+      div.className = 'legend-row';
+      div.innerHTML = `<span class="legend-dot" style="background:${g.conf_colors[ci]};border:1px solid #333"></span>${name}`;
+      rows.appendChild(div);
+    });
+  }
+
+  const W = svg.clientWidth || 600, H = svg.clientHeight || 400;
+
+  if (netId === 'toy') {
+    currentGraph = toyGraph();
+  } else if (netId === 'zkc') {
+    currentGraph = zkcGraph();
+  } else if (netId === 'afb') {
+    currentGraph = afbGraph();
+  } else {
+    currentGraph = { nodes: [], edges: [] };
+  }
+
+  metrics = computeMetrics(currentGraph.nodes, currentGraph.edges);
+  updateMetricsUI(metrics);
+
+  layout = new ForceLayout(currentGraph.nodes, currentGraph.edges, W, H);
+  layout.initPositions();
+
+  if (netId === 'custom') {
+    // Static mode: freeze the spring immediately
+    layout.temp = layout.minTemp;
+  } else {
+    // Pre-warm synchronously so the graph is already well-settled on first paint.
+    const warmIter = netId === 'afb' ? 300 : netId === 'zkc' ? 250 : 180;
+    layout.warmUp(warmIter);
+  }
+
+  buildSVG(currentGraph, layout, metrics);
+
+  function tick() {
+    // Run spring only for non-custom tabs
+    if (currentNet !== 'custom' && (layout.temp > layout.minTemp || dragIdx >= 0)) {
+      layout.step();
+      updatePositions();
+    }
+    animFrame = requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+// ═══════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    loadNetwork(tab.dataset.net);
+  });
+});
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+
+// Wait for layout paint
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => loadNetwork('toy'));
+});
+
+// Resize handler
+window.addEventListener('resize', () => {
+  if (!layout) return;
+  layout.width = svg.clientWidth;
+  layout.height = svg.clientHeight;
+});
+</script>
+
+<footer>
+  <div class="ft-block">
+    <div class="ft-label">Based on</div>
+    <div>
+      S. H. Lee, "Friendship-paradox paradox: do most people's friends really have more friends than they do?"
+      <em>Journal of the Korean Physical Society</em> <strong>88</strong>, 890–897 (2026).
+      <a href="https://doi.org/10.1007/s40042-025-01559-4" target="_blank">doi:10.1007/s40042-025-01559-4</a>
+    </div>
+    <div style="margin-top:4px">
+      S. H. Lee, "Two variants of the friendship paradox: The condition for inequality between them."
+      <em>New Physics: Sae Mulli</em> <strong>76</strong>(2), 169–175 (2026).
+      <a href="https://doi.org/10.3938/NPSM.76.169" target="_blank">doi:10.3938/NPSM.76.169</a>
+    </div>
+  </div>
+  <div class="ft-block">
+    <div class="ft-label">Network datasets</div>
+    <div>
+      W. W. Zachary, "An information flow model for conflict and fission in small groups,"
+      <em>Journal of Anthropological Research</em> <strong>33</strong>(4), 452–473 (1977).
+      <a href="https://doi.org/10.1086/jar.33.4.3629752" target="_blank">doi:10.1086/jar.33.4.3629752</a>
+    </div>
+    <div style="margin-top:4px">
+      M. Girvan &amp; M. E. J. Newman, "Community structure in social and biological networks,"
+      <em>Proc. Natl. Acad. Sci. USA</em> <strong>99</strong>, 7821–7826 (2002).
+      <a href="https://doi.org/10.1073/pnas.122653799" target="_blank">doi:10.1073/pnas.122653799</a>
+    </div>
+  </div>
+  <div style="align-self:center; margin-left:auto">
+    <div class="ft-credit">Created by Claude Sonnet 4.6 · Anthropic</div>
+  </div>
+</footer>
+
+</body>
+</html>
