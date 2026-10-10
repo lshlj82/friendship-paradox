@@ -2,12 +2,110 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<!-- theme-toggle:start -->
+<script>
+(function(){
+  var KEY='lshlj82-demo-theme', root=document.documentElement, Q='(prefers-color-scheme: dark)';
+  var nativeMM=window.matchMedia?window.matchMedia.bind(window):null;
+  var sys=nativeMM?nativeMM(Q):null, hooked=[];
+  function saved(){try{var v=localStorage.getItem(KEY);return v==='light'||v==='dark'?v:null}catch(e){return null}}
+  function effective(){return saved()||(sys&&sys.matches?'dark':'light')}
+  function apply(){root.setAttribute('data-theme',effective());root.style.colorScheme=effective()}
+  apply();
+  // Pages listen for OS colour-scheme changes to redraw their canvases; make those
+  // listeners (and .matches checks) follow the chosen theme instead of the OS alone.
+  if(nativeMM){
+    window.matchMedia=function(q){
+      var m=nativeMM(q);
+      if(!/prefers-color-scheme/.test(String(q)))return m;
+      var wantDark=/dark/.test(String(q));
+      try{Object.defineProperty(m,'matches',{configurable:true,get:function(){return (effective()==='dark')===wantDark}})}catch(e){}
+      var add=m.addEventListener, addL=m.addListener;
+      m.addEventListener=function(t,f,o){if(t==='change')hooked.push({m:m,f:f,d:wantDark});return add.call(m,t,f,o)};
+      if(addL)m.addListener=function(f){hooked.push({m:m,f:f,d:wantDark});return addL.call(m,f)};
+      return m;
+    };
+  }
+  function notify(){
+    hooked.forEach(function(h){
+      var ev={matches:(effective()==='dark')===h.d,media:h.m.media,type:'change'};
+      try{typeof h.f==='function'?h.f.call(h.m,ev):h.f&&h.f.handleEvent&&h.f.handleEvent(ev)}catch(e){console.error(e)}
+    });
+    window.dispatchEvent(new CustomEvent('themechange',{detail:{theme:effective()}}));
+  }
+  if(sys){var onSys=function(){if(!saved())apply()};sys.addEventListener?sys.addEventListener('change',onSys):sys.addListener(onSys)}
+  function label(b){var d=effective()==='dark';b.setAttribute('aria-label',d?'Switch to light mode':'Switch to dark mode');b.title=d?'Light mode':'Dark mode'}
+  function mount(){
+    if(document.getElementById('theme-toggle'))return;
+    var b=document.createElement('button');
+    b.id='theme-toggle';b.type='button';
+    b.innerHTML='<svg class="tt-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="tt-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 14.6A8.3 8.3 0 0 1 9.4 3.8a8.3 8.3 0 1 0 10.8 10.8z"/></svg>';
+    label(b);
+    b.addEventListener('click',function(){
+      var next=effective()==='dark'?'light':'dark';
+      try{localStorage.setItem(KEY,next)}catch(e){}
+      apply();label(b);notify();
+    });
+    document.body.appendChild(b);
+    new MutationObserver(function(){label(b)}).observe(root,{attributes:true,attributeFilter:['data-theme']});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
+})();
+</script>
+<style>
+#theme-toggle{position:absolute;z-index:2147483000;right:calc(env(safe-area-inset-right,0px) + 12px);top:calc(env(safe-area-inset-top,0px) + 12px);
+  width:38px;height:38px;padding:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+  background:rgba(255,255,255,.88);color:#1d2633;border:1px solid rgba(20,30,45,.16);
+  box-shadow:0 2px 10px rgba(10,20,35,.14);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  transition:background-color .2s,color .2s,border-color .2s,transform .15s}
+#theme-toggle:hover{transform:scale(1.06)}
+#theme-toggle:focus-visible{outline:2px solid #3b82f6;outline-offset:2px}
+#theme-toggle svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#theme-toggle .tt-moon{fill:currentColor;stroke:none}
+#theme-toggle .tt-sun{display:none}
+:root[data-theme="dark"] #theme-toggle{background:rgba(22,28,38,.88);color:#e8eef6;border-color:rgba(255,255,255,.16);box-shadow:0 2px 12px rgba(0,0,0,.45)}
+:root[data-theme="dark"] #theme-toggle .tt-sun{display:block}
+:root[data-theme="dark"] #theme-toggle .tt-moon{display:none}
+@media (prefers-reduced-motion:reduce){#theme-toggle{transition:none}#theme-toggle:hover{transform:none}}
+@media (max-width:760px){:root:root{padding-top:calc(env(safe-area-inset-top,0px) + 58px)}}
+@media print{#theme-toggle{display:none}}
+</style>
+<!-- theme-toggle:end -->
+
+
+
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Friendship Paradox Explorer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
 <style>
   :root {
+    --bg: #F3F6FA;
+    --surface: #FFFFFF;
+    --surface2: #EBF0F6;
+    --border: #D3DCE7;
+    --text: #23324A;
+    --text-dim: #5E7189;
+    --text-bright: #0D1828;
+    --blue: #2563EB;
+    --blue-dim: #C7D8F7;
+    --teal: #0D9488;
+    --amber: #B45309;
+    --red: #DC2626;
+    --green: #16803C;
+    --purple: #7C3AED;
+    --edge: #B9C6D6;
+    --node-outline: #FFFFFF;
+    color-scheme: light;
+    --node-default: #2563EB;
+    --node-dominated-mean: #DC2626;
+    --node-dominated-median: #D97706;
+    --node-dominated-both: #7C3AED;
+    --node-undominated: #059669;
+    --font-body: 'IBM Plex Sans', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'Cascadia Code', monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
     --bg: #080C12;
     --surface: #0E1520;
     --surface2: #141D2B;
@@ -22,14 +120,33 @@
     --red: #EF4444;
     --green: #22C55E;
     --purple: #A78BFA;
-    --node-default: #2563EB;
-    --node-dominated-mean: #DC2626;
-    --node-dominated-median: #D97706;
-    --node-dominated-both: #7C3AED;
-    --node-undominated: #059669;
-    --font-body: 'IBM Plex Sans', system-ui, sans-serif;
-    --font-mono: 'IBM Plex Mono', 'Cascadia Code', monospace;
+    --edge: #1E2D42;
+    --node-outline: #080C12;
+    color-scheme: dark;
+  } }
+  :root[data-theme="dark"] {
+    --bg: #080C12;
+    --surface: #0E1520;
+    --surface2: #141D2B;
+    --border: #1E2D42;
+    --text: #C8D8EC;
+    --text-dim: #5A7A9A;
+    --text-bright: #EAF2FF;
+    --blue: #3B82F6;
+    --blue-dim: #1D3D7A;
+    --teal: #14B8A6;
+    --amber: #F59E0B;
+    --red: #EF4444;
+    --green: #22C55E;
+    --purple: #A78BFA;
+    --edge: #1E2D42;
+    --node-outline: #080C12;
+    color-scheme: dark;
   }
+  #edge-layer line { stroke: var(--edge); }
+  #node-layer circle.n-plain { stroke: var(--node-outline); }
+  #node-layer circle.n-sel { stroke: var(--amber) !important; }
+
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -675,7 +792,7 @@ function renderEdges(edges, lay, group) {
     const line = document.createElementNS(NS, 'line');
     line.setAttribute('x1', lay.x[s]); line.setAttribute('y1', lay.y[s]);
     line.setAttribute('x2', lay.x[t]); line.setAttribute('y2', lay.y[t]);
-    line.setAttribute('stroke', '#1E2D42');
+    
     line.setAttribute('stroke-width', currentGraph.nodes.length > 50 ? '0.8' : '1.5');
     group.appendChild(line);
   }
@@ -704,7 +821,7 @@ function renderNodes(nodes, lay, m, group) {
       circle.setAttribute('fill-opacity', '0.85');
     } else {
       circle.setAttribute('fill', nodeColor(i, m));
-      circle.setAttribute('stroke', '#080C12');
+      circle.classList.add('n-plain');
       circle.setAttribute('stroke-width', '1.5');
     }
     g.appendChild(circle);
@@ -841,7 +958,7 @@ function highlightSelected(i, on) {
   const nodeGroup = document.getElementById('node-layer');
   if (!nodeGroup || !nodeGroup.children[i]) return;
   const circle = nodeGroup.children[i].querySelector('circle');
-  if (circle) circle.setAttribute('stroke', on ? '#F59E0B' : '#080C12');
+  if (circle) circle.classList.toggle('n-sel', on);
   circle && (circle.setAttribute('stroke-width', on ? '3' : '1.5'));
 }
 
