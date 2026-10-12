@@ -101,6 +101,13 @@ The custom canvas uses a **static layout**: nodes stay exactly where you place o
 
 ---
 
+## Related
+
+- **Introductory demo:** [Friendship paradox](https://lshlj82.github.io/FP-netsci-course/) ([source](https://github.com/lshlj82/FP-netsci-course)), which builds up the same ideas step by step: the sampling bias behind the paradox, the alter- and ego-based averages, and the majority-type fractions.
+- **Course page:** that demo is demo 8 of the [Network Science course demos](https://lshlj82.github.io/netsci-course-GNU/) ([source](https://github.com/lshlj82/netsci-course-GNU)) for the Department of Physics, Gyeongsang National University.
+
+---
+
 ## Citation
 
 If you use this tool in your work, please cite the two papers listed at the top of this README.
