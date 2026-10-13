@@ -12,7 +12,7 @@
   function effective(){return saved()||(sys&&sys.matches?'dark':'light')}
   function apply(){root.setAttribute('data-theme',effective());root.style.colorScheme=effective()}
   apply();
-  // Pages listen for OS colour-scheme changes to redraw their canvases; make those
+  // Pages listen for OS color-scheme changes to redraw their canvases; make those
   // listeners (and .matches checks) follow the chosen theme instead of the OS alone.
   if(nativeMM){
     window.matchMedia=function(q){
@@ -71,6 +71,7 @@
 @media print{#theme-toggle{display:none}}
 </style>
 <!-- theme-toggle:end -->
+
 
 
 
@@ -1209,15 +1210,6 @@ window.addEventListener('resize', () => {
       M. Girvan &amp; M. E. J. Newman, "Community structure in social and biological networks,"
       <em>Proc. Natl. Acad. Sci. USA</em> <strong>99</strong>, 7821–7826 (2002).
       <a href="https://doi.org/10.1073/pnas.122653799" target="_blank">doi:10.1073/pnas.122653799</a>
-    </div>
-  </div>
-  <div class="ft-block">
-    <div class="ft-label">Learn more · 함께 보기</div>
-    <div>
-      <a href="https://lshlj82.github.io/FP-netsci-course/">Friendship paradox</a> (친구 역설): an introductory demo of the same ideas, from the sampling bias behind the paradox to the two ways of averaging your friends&rsquo; friends.
-    </div>
-    <div style="margin-top:4px">
-      Part of the <a href="https://lshlj82.github.io/netsci-course-GNU/">Network Science course demos</a> (네트워크 과학 교과목 보조자료), Department of Physics, Gyeongsang National University.
     </div>
   </div>
   <div style="align-self:center; margin-left:auto">
