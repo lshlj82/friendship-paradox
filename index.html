@@ -86,14 +86,14 @@
     --surface2: #EBF0F6;
     --border: #D3DCE7;
     --text: #23324A;
-    --text-dim: #5E7189;
+    --text-dim: #536680;
     --text-bright: #0D1828;
     --blue: #2563EB;
     --blue-dim: #C7D8F7;
     --teal: #0D9488;
     --amber: #B45309;
-    --red: #DC2626;
-    --green: #16803C;
+    --red: #C81E1E;
+    --green: #13703A;
     --purple: #7C3AED;
     --edge: #B9C6D6;
     --node-outline: #FFFFFF;
@@ -112,13 +112,13 @@
     --surface2: #141D2B;
     --border: #1E2D42;
     --text: #C8D8EC;
-    --text-dim: #5A7A9A;
+    --text-dim: #7D96B4;
     --text-bright: #EAF2FF;
     --blue: #3B82F6;
     --blue-dim: #1D3D7A;
     --teal: #14B8A6;
     --amber: #F59E0B;
-    --red: #EF4444;
+    --red: #F87171;
     --green: #22C55E;
     --purple: #A78BFA;
     --edge: #1E2D42;
@@ -131,13 +131,13 @@
     --surface2: #141D2B;
     --border: #1E2D42;
     --text: #C8D8EC;
-    --text-dim: #5A7A9A;
+    --text-dim: #7D96B4;
     --text-bright: #EAF2FF;
     --blue: #3B82F6;
     --blue-dim: #1D3D7A;
     --teal: #14B8A6;
     --amber: #F59E0B;
-    --red: #EF4444;
+    --red: #F87171;
     --green: #22C55E;
     --purple: #A78BFA;
     --edge: #1E2D42;
@@ -397,8 +397,8 @@
   }
   footer .ft-block { flex: 1; min-width: 260px; }
   footer .ft-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 3px; }
-  footer a { color: var(--blue); text-decoration: none; }
-  footer a:hover { text-decoration: underline; }
+  footer a { color: var(--blue); text-decoration: underline; text-underline-offset: 2px; }
+  footer a:hover { text-decoration-thickness: 2px; }
   footer .ft-credit { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); white-space: nowrap; }
 
   /* Scrollbar */
@@ -406,7 +406,9 @@
   .metrics-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
   @media (max-width: 700px) {
-    .app { grid-template-columns: 1fr; grid-template-rows: auto 55vw 1fr; height: auto; overflow: visible; }
+    .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 55vw 1fr; height: auto; overflow: visible; }
+    .app > * { min-width: 0; }
+    .tabs { overflow-x: auto; }
     .metrics-panel { border-left: none; border-top: 1px solid var(--border); overflow-y: visible; }
     .canvas-panel { height: 55vw; }
     footer { padding: 12px 16px; }
@@ -429,7 +431,7 @@
   </div>
 
   <div class="canvas-panel">
-    <svg id="network-svg"></svg>
+    <svg id="network-svg" role="img" aria-label="Network diagram"></svg>
     <div id="tooltip">
       <div class="tt-title" id="tt-name">Node 1</div>
       <div class="tt-row" id="tt-conf-row" style="display:none"><span class="tt-label">conference</span><span class="tt-val" id="tt-conf">—</span></div>
@@ -485,7 +487,7 @@
       <div class="mc-label">φ_local — median-based majority  <span class="badge" id="b-local">—</span></div>
       <div class="mc-formula">fraction {hᵢ &lt; ½}  where hᵢ = |{j∈𝒩: kⱼ &lt; kᵢ}|/kᵢ</div>
       <div class="mc-value" id="m-phi-local">—</div>
-      <div class="mc-interp">Share of nodes where most neighbors have higher degree</div>
+      <div class="mc-interp">Share of nodes for which fewer than half of the neighbors have a <em>lower</em> degree. Neighbors with equal degree count as not lower, so in a ring (all degrees equal) every node counts and φ_local = 1.</div>
     </div>
 
     <div class="legend" id="legend-domination">
@@ -574,6 +576,18 @@ function afbGraph() {
 // ═══════════════════════════════════════════════════════
 // GRAPH METRICS
 // ═══════════════════════════════════════════════════════
+
+// Undirected edges are stored as {s: min, t: max} without duplicates or self-loops,
+// so lookups by (min, max) always find them.
+function normEdges(edges) {
+  const seen = new Set(), out = [];
+  for (const { s, t } of edges) {
+    const a = Math.min(s, t), b = Math.max(s, t), key = a + ',' + b;
+    if (a === b || seen.has(key)) continue;
+    seen.add(key); out.push({ s: a, t: b });
+  }
+  return out;
+}
 
 function computeMetrics(nodes, edges) {
   const N = nodes.length;
@@ -785,6 +799,7 @@ function buildSVG(g, lay, m) {
 
   renderEdges(g.edges, lay, edgeGroup);
   renderNodes(g.nodes, lay, m, nodeGroup);
+  svg.setAttribute('aria-label', `Network diagram: ${g.nodes.length} nodes, ${g.edges.length} edges; node colors show the domination type listed in the legend`);
 }
 
 function renderEdges(edges, lay, group) {
@@ -1018,6 +1033,7 @@ function loadCustomPreset(type) {
   } else if (type === 'ring') {
     currentGraph = { nodes: [0,1,2,3,4,5].map(i=>({id:i,label:String(i+1)})), edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0]].map(([s,t])=>({s,t})) };
   }
+  currentGraph.edges = normEdges(currentGraph.edges);
   const W = svg.clientWidth, H = svg.clientHeight;
   const N = currentGraph.nodes.length;
   const r = Math.min(W, H) * 0.32;
@@ -1127,6 +1143,7 @@ function loadNetwork(netId) {
   } else {
     currentGraph = { nodes: [], edges: [] };
   }
+  currentGraph.edges = normEdges(currentGraph.edges);
 
   metrics = computeMetrics(currentGraph.nodes, currentGraph.edges);
   updateMetricsUI(metrics);
@@ -1177,12 +1194,22 @@ requestAnimationFrame(() => {
   requestAnimationFrame(() => loadNetwork('toy'));
 });
 
-// Resize handler
-window.addEventListener('resize', () => {
+// Resize handler: rescale the current positions into the new drawing area and redraw
+function fitLayoutToSvg() {
   if (!layout) return;
-  layout.width = svg.clientWidth;
-  layout.height = svg.clientHeight;
-});
+  const W = svg.clientWidth, H = svg.clientHeight;
+  if (!W || !H || (W === layout.width && H === layout.height)) return;
+  const sx = W / (layout.width || W), sy = H / (layout.height || H), pad = 20;
+  for (let i = 0; i < layout.N; i++) {
+    layout.x[i] = Math.max(pad, Math.min(W - pad, layout.x[i] * sx));
+    layout.y[i] = Math.max(pad, Math.min(H - pad, layout.y[i] * sy));
+  }
+  layout.width = W; layout.height = H;
+  layout._k = Math.sqrt((W * H) / Math.max(layout.N, 1));
+  updatePositions();
+}
+if (window.ResizeObserver) new ResizeObserver(fitLayoutToSvg).observe(svg);
+else window.addEventListener('resize', fitLayoutToSvg);
 </script>
 
 <footer>
